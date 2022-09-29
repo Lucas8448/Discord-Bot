@@ -1,27 +1,21 @@
+from binascii import crc_hqx
+from http import client
 import os
 import discord
 import random
 import sqlite3
 from discord.ext import commands
 import asyncio
+import requests
 
 TOKEN = 'MTAyMjc1MjY1NTk4ODIzMjIwMg.GhSFWq.a9HgpMQvFMfgCar8JFo7GJrJTGCSAjbOH3h_70'
 
-client = discord.Client(intents=discord.Intents.all())
+
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 
 # delete tenor messages in all channels other than memes
 
 
-@client.event
-# when user sends private dm to bot, print in console
-async def on_message(message):
-    if message.author == client.user:
-        return
-    else:
-        if message.channel.type == discord.ChannelType.private:
-            # Forward message to member with id 977654996998975489
-            await client.get_user(977654996998975489).send("From: " + message.author + " Message: " + message.content)
 
 
 @bot.event
@@ -35,30 +29,6 @@ async def on_member_join(member):
     await member.dm_channel.send(
         f'Hi {member.name}, welcome to the F21 Discord server!'
     )
-
-# @bot.event
-# async def on_message(message):
-#    print(message.author.id)
-#    if message.author == bot.user:
-#        return
-#
-#    if "$" in message.content.lower():
-#        print(message.content.lower())
-#        content = message.content.lower()
-#        content = content[1:].lower()
-#        print(content)
-#        if content == 'hello':
-#            await message.channel.send('Hello!')
-#
-#        if content == 'help':
-#            await message.channel.send("Commands:\n$hello\n$help\n$ping")
-#
-#        if content == 'ping':
-#            await message.channel.send('Pong!')
-#
-#    else:
-#        pass
-
 
 @bot.command(name="random", help="Responds with a random number between the two numbers you input")
 async def rand(ctx, low: int, high: int):
@@ -116,6 +86,38 @@ async def dm(ctx, user: discord.Member, *, message):
         else:
             await ctx.send('You do not have the permissions to do this')
 
+@bot.command(name="p", description="send a web request to a website and prints the time used for the request")
+async def ping(ctx, *, website):
+    c = requests.get("https://" + website)
+    await ctx.send("Website: " + website + "\nResponse time: " + str(c.elapsed.total_seconds()) + " seconds")
 
-client.run(TOKEN)
+#bot voice chat functions
+
+#join users voice channel
+@bot.command(name="join", description="Make bot join voice channel")
+async def joinvc(ctx):
+    try:
+        channel = ctx.author.voice.channel
+        await channel.connect()
+    except Exception as e:
+        print(e)
+        await ctx.send(f"Could not connect to voice channel")
+        
+#leave voice channel
+@bot.command(name="leave", description="Leave voice channel")
+async def leavevc(ctx):
+    server = ctx.message.server
+    voice_client = client.voice_client_in(server)
+    if voice_client:
+        await voice_client.disconnect()
+        print("Bot left the voice channel")
+    else:
+        await ctx.send("Bot was not in channel")
+
+
+
+
+    
+
+
 bot.run(TOKEN)
