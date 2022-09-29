@@ -16,8 +16,6 @@ bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 # delete tenor messages in all channels other than memes
 
 
-
-
 @bot.event
 async def on_ready():
     print(f'{bot.user.name} has connected to Discord!')
@@ -29,6 +27,7 @@ async def on_member_join(member):
     await member.dm_channel.send(
         f'Hi {member.name}, welcome to the F21 Discord server!'
     )
+
 
 @bot.command(name="random", help="Responds with a random number between the two numbers you input")
 async def rand(ctx, low: int, high: int):
@@ -86,14 +85,17 @@ async def dm(ctx, user: discord.Member, *, message):
         else:
             await ctx.send('You do not have the permissions to do this')
 
+
 @bot.command(name="p", description="send a web request to a website and prints the time used for the request")
 async def ping(ctx, *, website):
     c = requests.get("https://" + website)
     await ctx.send("Website: " + website + "\nResponse time: " + str(c.elapsed.total_seconds()) + " seconds")
 
-#bot voice chat functions
+# bot voice chat functions
 
-#join users voice channel
+# join users voice channel
+
+
 @bot.command(name="join", description="Make bot join voice channel")
 async def joinvc(ctx):
     try:
@@ -102,22 +104,32 @@ async def joinvc(ctx):
     except Exception as e:
         print(e)
         await ctx.send(f"Could not connect to voice channel")
-        
-#leave voice channel
+
+# leave voice channel
+
+
 @bot.command(name="leave", description="Leave voice channel")
 async def leavevc(ctx):
-    server = ctx.message.server
-    voice_client = client.voice_client_in(server)
-    if voice_client:
-        await voice_client.disconnect()
-        print("Bot left the voice channel")
+    try:
+        await ctx.voice_client.disconnect()
+    except Exception as e:
+        print(e)
+        await ctx.send(f"Could not leave voice channel")
+
+# meme filter
+
+
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
+        return
+    if message.channel.name == "memes" or message.channel.name == "off-topic":
+        await bot.process_commands(message)
     else:
-        await ctx.send("Bot was not in channel")
-
-
-
-
-    
+        if "tenor" in message.content:
+            await message.delete()
+        else:
+            await bot.process_commands(message)
 
 
 bot.run(TOKEN)
