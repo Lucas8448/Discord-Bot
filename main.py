@@ -1,5 +1,3 @@
-from binascii import crc_hqx
-from http import client
 import os
 import discord
 import random
@@ -8,18 +6,31 @@ from discord.ext import commands
 import asyncio
 import requests
 
-TOKEN = 'MTAyMjc1MjY1NTk4ODIzMjIwMg.GhSFWq.a9HgpMQvFMfgCar8JFo7GJrJTGCSAjbOH3h_70'
 
+# create database if not exists
+if not os.path.exists('data.db'):
+    conn = sqlite3.connect('data.db')
+    c = conn.cursor()
+    #create table that logs all messages
+    c.execute('''CREATE TABLE user (name TEXT PRIMARY KEY, money INTEGER)''')
+    #finish creating db
+    conn.commit()
+    conn.close()
+
+#create message logger
+
+
+TOKEN = 'MTAyMjc1MjY1NTk4ODIzMjIwMg.GhSFWq.a9HgpMQvFMfgCar8JFo7GJrJTGCSAjbOH3h_70'
 
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 
-# delete tenor messages in all channels other than memes
-
-
+@bot.command(name="ping")
+async def ping(ctx):
+    await ctx.send(f"Pong! {round(bot.latency * 1000)}ms")  
+    
 @bot.event
 async def on_ready():
     print(f'{bot.user.name} has connected to Discord!')
-
 
 @bot.event
 async def on_member_join(member):
@@ -58,6 +69,7 @@ async def timeout(ctx, user: discord.Member, time: int):
 
 @bot.command(name="wikipedia", help="Searches wikipedia for a specified topic")
 async def wiki(ctx, *, search):
+    #filter explicit words
     await ctx.send('Searching wikipedia for {}'.format(search))
     search = search.replace(" ", "_")
     await ctx.send('https://en.wikipedia.org/wiki/{}'.format(search))
@@ -114,9 +126,7 @@ async def leavevc(ctx):
         await ctx.voice_client.disconnect()
     except Exception as e:
         print(e)
-        await ctx.send(f"Could not leave voice channel")
-
-# meme filter
+        await ctx.send(f"Could not leave voice channel")     
 
 
 @bot.event
@@ -130,6 +140,84 @@ async def on_message(message):
             await message.delete()
         else:
             await bot.process_commands(message)
+            
+# money roleplay
+@bot.command(name="work", description="Earn roleplay money")
+async def work(ctx):
+    conn = sqlite3.connect('data.db')
+    c = conn.cursor()
+    c.execute("SELECT * FROM user WHERE name = ?", (ctx.author.name,))
+    if c.fetchone() is None:
+        c.execute("INSERT INTO user VALUES (?, ?)", (ctx.author.name, 0))
+        conn.commit()
+    c.execute("SELECT * FROM user WHERE name = ?", (ctx.author.name,))
+    money = c.fetchone()[1]
+    money += random.choice(range(1, 10))
+    c.execute("UPDATE user SET money = ? WHERE name = ?", (money, ctx.author.name))
+    conn.commit()
+    await ctx.send(f"{ctx.author.name} earned money! They now have {money} dollars")
+    conn.close()
 
-
+@bot.command(name="money", description="View roleplay money")
+async def money(ctx):
+    conn = sqlite3.connect('data.db')
+    c = conn.cursor()
+    c.execute("SELECT * FROM user WHERE name = ?", (ctx.author.name,))
+    if c.fetchone() is None:
+        c.execute("INSERT INTO user VALUES (?, ?)", (ctx.author.name, 0))
+        conn.commit()
+    c.execute("SELECT * FROM user WHERE name = ?", (ctx.author.name,))
+    money = c.fetchone()[1]
+    await ctx.send(f"{ctx.author.name} has {money} dollars")
+    conn.close()
+    
+@bot.command(name="give", description="Give roleplay money to another user")
+async def give(ctx):
+    conn = sqlite3.connect('data.db')
+    c = conn.cursor()
+    c.execute("SELECT * FROM user WHERE name = ?", (ctx.author.name,))
+    if c.fetchone() is None:
+        c.execute("INSERT INTO user VALUES (?, ?)", (ctx.author.name, 0))
+        conn.commit()
+    c.execute("SELECT * FROM user WHERE name = ?", (ctx.author.name,))
+    money = c.fetchone()[1]
+    if money >= 10:
+        money -= 10
+        c.execute("UPDATE user SET money = ? WHERE name = ?", (money, ctx.author.name))
+        conn.commit()
+        await ctx.send(f"{ctx.author.name} gave 10 dollars to {ctx.message.mentions[0].name}")
+        c.execute("SELECT * FROM user WHERE name = ?", (ctx.message.mentions[0].name,))
+        if c.fetchone() is None:
+            c.execute("INSERT INTO user VALUES (?, ?)", (ctx.message.mentions[0].name, 0))
+            conn.commit()
+        c.execute("SELECT * FROM user WHERE name = ?", (ctx.message.mentions[0].name,))
+        money2 = c.fetchone()[1]
+        money2 += 10
+        c.execute("UPDATE user SET money = ? WHERE name = ?", (money2, ctx.message.mentions[0].name))
+        conn.commit()
+    else:
+        await ctx.send(f"{ctx.author.name} does not have enough money to give 10 dollars to {ctx.message.mentions[0].name}")
+    conn.close()
+    
+@bot.command(name="rob", description="Rob roleplay money from another user")
+async def rob(ctx):
+    conn = sqlite3.connect('data.db')
+    c = conn.cursor()
+    c.execute("SELECT * FROM user WHERE name = ?", (ctx.author.name,))
+    if c.fetchone() is None:
+        c.execute("INSERT INTO user VALUES (?, ?)", (ctx.author.name, 0))
+        conn.commit()
+    c.execute("SELECT * FROM user WHERE name = ?", (ctx.author.name,))
+    money = c.fetchone()[1]
+    chance = random.choice(range(1, 10))
+    if chance <= 5:
+        money += random.choice(range(0, 100))
+        c.execute("UPDATE user SET money = ? WHERE name = ?", (money, ctx.author.name))
+        
+        conn.commit()
+        await ctx.send(f"{ctx.author.name} robbed {ctx.message.mentions[0].name} and got {money} dollars")
+    else:
+        await ctx.send(f"{ctx.author.name} failed to rob {ctx.message.mentions[0].name}")
+    conn.close()
+    
 bot.run(TOKEN)
