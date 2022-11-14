@@ -19,8 +19,9 @@ if not os.path.exists('data.db'):
 
 #create message logger
 
-
-TOKEN = 'MTAyMjc1MjY1NTk4ODIzMjIwMg.GhSFWq.a9HgpMQvFMfgCar8JFo7GJrJTGCSAjbOH3h_70'
+#read token from token.txt
+with open('token.txt', 'r') as f:
+    TOKEN = f.read()
 
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 
